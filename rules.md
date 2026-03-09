@@ -1,0 +1,15 @@
+- **Stack obligatorio:** Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui.
+- **Dependencias:** no agregar dependencias nuevas sin consulta previa (excepción: recharts permitido con aprobación explícita).
+- **Sin base de datos:** usar localStorage para:
+  - API keys (TradingView / Twelve Data)
+- **Idioma UI:** español (México).
+- **Fuentes de datos:**
+  - BTC spot: CoinGecko (USD, MXN). Fallback Bitso.
+  - Activos financieros: TradingView REST (si hay key). Fallback Twelve Data (si hay key). Si no, modo demo (mock).
+  - Activos estáticos (casa/pizza/auto): JSON local `/data/precios_anuales.json`.
+  - Para forzar modo demo aunque exista `TWELVEDATA_API_KEY`: `BPE_FORCE_DEMO=1`.
+- **Seguridad (MVP/hackathon):** se permite leer keys en cliente y llamar APIs desde el cliente; documentar que en producción no se debe exponer.
+- **Manejo de errores:**
+  - Mostrar estado “cargando/error/demo”.
+  - Cachear en localStorage el último payload válido por activo para resiliencia.
+- **Normalización de datos:** mantener series consistentes para cálculo y gráficas; conversión USD→BTC usando BTC/USD.
