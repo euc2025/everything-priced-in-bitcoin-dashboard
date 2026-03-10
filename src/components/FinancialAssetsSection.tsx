@@ -16,12 +16,12 @@ export function FinancialAssetsSection() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <MarketAssetCard asset="gold" title="Oro priced in BTC" subtitle="XAU/USD ÷ BTC/USD" />
-        <MarketAssetCard asset="silver" title="Plata priced in BTC" subtitle="XAG/USD ÷ BTC/USD" />
-        <MarketAssetCard asset="eth" title="Ethereum priced in BTC" subtitle="ETH/USD ÷ BTC/USD" />
-        <MarketAssetCard asset="nasdaq" title="NASDAQ priced in BTC" subtitle="NDX ÷ BTC/USD" />
-        <MarketAssetCard asset="sp500" title="S&P 500 priced in BTC" subtitle="SPX ÷ BTC/USD" />
-        <MarketAssetCard asset="meta" title="META priced in BTC" subtitle="META ÷ BTC/USD" />
+        <MarketAssetCard asset="gold" title="Oro contra Bitcoin" subtitle="XAU/USD ÷ BTC/USD" />
+        <MarketAssetCard asset="silver" title="Plata contra Bitcoin" subtitle="XAG/USD ÷ BTC/USD" />
+        <MarketAssetCard asset="sp500" title="S&P500 contra Bitcoin" subtitle="SPX ÷ BTC/USD" />
+        <MarketAssetCard asset="nasdaq" title="Nasdaq contra Bitcoin" subtitle="NDX ÷ BTC/USD" />
+        <MarketAssetCard asset="meta" title="Meta contra Bitcoin" subtitle="META ÷ BTC/USD" />
+        <MarketAssetCard asset="eth" title="Ethereum contra Bitcoin" subtitle="ETH/USD ÷ BTC/USD" />
       </div>
     </section>
   );

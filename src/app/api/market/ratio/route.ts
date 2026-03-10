@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
+import fs from "node:fs";
+import path from "node:path";
+import * as XLSX from "xlsx";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type AssetKey = "gold" | "silver" | "eth" | "nasdaq" | "sp500" | "meta";
 
@@ -17,7 +21,7 @@ type ApiResponse = {
   start_date: string;
   asset_symbol: string;
   btc_symbol: string;
-  source: "demo" | "twelvedata";
+  source: "dataset" | "demo" | "twelvedata";
   fetched_at: string;
   points: RatioPoint[];
 };
@@ -43,6 +47,131 @@ const ASSET_SYMBOLS: Record<AssetKey, string[]> = {
 };
 
 const BTC_SYMBOL = "BTC/USD";
+
+const XLSX_PUBLIC_REL_PATH = "market-ratios.xlsx";
+
+function getXlsxPath() {
+  return path.join(process.cwd(), "public", XLSX_PUBLIC_REL_PATH);
+}
+
+function excelSerialDateToIso(serial: number) {
+  const d = XLSX.SSF.parse_date_code(serial);
+  if (!d || !d.y || !d.m || !d.d) return null;
+  const dt = new Date(Date.UTC(d.y, d.m - 1, d.d));
+  return Number.isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
+}
+
+type DatasetSheet = {
+  sheetName: string;
+  header: string;
+  points: Array<{ datetime: string; ratio: number }>;
+};
+
+let datasetCache:
+  | {
+      mtimeMs: number;
+      byAsset: Record<AssetKey, DatasetSheet>;
+    }
+  | null = null;
+
+function tryLoadDataset(): Record<AssetKey, DatasetSheet> | null {
+  const filePath = getXlsxPath();
+  if (!fs.existsSync(filePath)) return null;
+
+  const stat = fs.statSync(filePath);
+  if (datasetCache && datasetCache.mtimeMs === stat.mtimeMs) {
+    return datasetCache.byAsset;
+  }
+
+  const buf = fs.readFileSync(filePath);
+  const wb = XLSX.read(buf, { type: "buffer" });
+
+  const sheets: DatasetSheet[] = [];
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    if (!ws) continue;
+
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, {
+      defval: null,
+    });
+    if (!rows.length) continue;
+
+    const first = rows[0] || {};
+    const keys = Object.keys(first);
+    const dateKey = keys.find((k) => {
+      const kk = k.toLowerCase();
+      return kk === "date" || kk === "time";
+    });
+    const ratioKey = keys.find((k) => {
+      const kk = k.toLowerCase();
+      return kk !== "date" && kk !== "time";
+    });
+    if (!dateKey || !ratioKey) continue;
+
+    const points = rows
+      .map((r) => {
+        const date = r[dateKey];
+        const ratio = r[ratioKey];
+        const datetime =
+          typeof date === "string"
+            ? date.slice(0, 10)
+            : typeof date === "number"
+              ? excelSerialDateToIso(date)
+              : date instanceof Date
+                ? date.toISOString().slice(0, 10)
+                : null;
+        if (!datetime) return null;
+        const ratioNum =
+          typeof ratio === "number"
+            ? ratio
+            : typeof ratio === "string"
+              ? Number.parseFloat(ratio)
+              : NaN;
+        if (!Number.isFinite(ratioNum) || ratioNum <= 0) return null;
+        return { datetime, ratio: ratioNum };
+      })
+      .filter((p): p is { datetime: string; ratio: number } => Boolean(p))
+      .sort((a, b) => a.datetime.localeCompare(b.datetime));
+
+    if (!points.length) continue;
+    const header = ratioKey === "close" ? sheetName : ratioKey;
+    sheets.push({ sheetName, header, points });
+  }
+
+  const headerToAsset: Array<[RegExp, AssetKey]> = [
+    [/^xau|gold/i, "gold"],
+    [/^xag|silver/i, "silver"],
+    [/^eth/i, "eth"],
+    [/sp500|spx|spy/i, "sp500"],
+    [/nasdaq|ndx|qqq|ndq/i, "nasdaq"],
+    [/meta/i, "meta"],
+  ];
+
+  const byAsset = {} as Record<AssetKey, DatasetSheet>;
+  for (const s of sheets) {
+    const header = s.header;
+    const sheetName = s.sheetName;
+    const guess = headerToAsset.find(
+      ([re]) => re.test(header) || re.test(sheetName),
+    );
+    if (guess) {
+      const asset = guess[1];
+      if (!byAsset[asset]) byAsset[asset] = s;
+    }
+  }
+
+  const missing = (Object.keys(ASSET_SYMBOLS) as AssetKey[]).filter(
+    (k) => !byAsset[k],
+  );
+  if (missing.length) {
+    throw new Error(
+      `XLSX dataset incompleto; faltan hojas para: ${missing.join(", ")}`,
+    );
+  }
+
+  datasetCache = { mtimeMs: stat.mtimeMs, byAsset };
+  return byAsset;
+}
 
 const lastGood = new Map<string, ApiResponse>();
 
@@ -293,6 +422,44 @@ export async function GET(req: Request) {
   }
 
   const cacheKey = `${asset}:${interval}:${start_date}`;
+
+  try {
+    const dataset = tryLoadDataset();
+    const sheet = dataset?.[asset];
+    if (sheet) {
+      const points: RatioPoint[] = sheet.points
+        .filter((p) => p.datetime >= start_date)
+        .map((p) => ({
+          datetime: p.datetime,
+          ratio: p.ratio,
+          assetClose: p.ratio,
+          btcClose: 1,
+        }));
+
+      const response: ApiResponse = {
+        asset,
+        interval,
+        start_date,
+        asset_symbol: sheet.header,
+        btc_symbol: "BTC",
+        source: "dataset",
+        fetched_at,
+        points,
+      };
+
+      return NextResponse.json(response, {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Error desconocido";
+    return NextResponse.json(
+      { error: `No se pudo leer market-ratios.xlsx: ${message}` },
+      { status: 500 },
+    );
+  }
 
   const forceDemo = process.env.BPE_FORCE_DEMO === "1";
   const useTwelveData = process.env.BPE_USE_TWELVEDATA === "1";

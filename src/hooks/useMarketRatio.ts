@@ -17,7 +17,7 @@ type ApiResponse = {
   start_date: string;
   asset_symbol: string;
   btc_symbol: string;
-  source: "demo" | "twelvedata";
+  source: "dataset" | "demo" | "twelvedata";
   fetched_at: string;
   points: MarketRatioPoint[];
 };

@@ -17,6 +17,7 @@ function formatPct(pct: number) {
 }
 
 function formatProvider(source: string) {
+  if (source === "dataset") return "Dataset XLSX";
   if (source === "twelvedata") return "Twelve Data";
   if (source === "demo") return "Twelve Data Demo";
   return source;
@@ -35,7 +36,9 @@ export function MarketAssetCard({
 
   const computedSubtitle =
     data?.asset_symbol && data?.btc_symbol
-      ? `${data.asset_symbol} ÷ ${data.btc_symbol}`
+      ? data.source === "dataset"
+        ? data.asset_symbol
+        : `${data.asset_symbol} ÷ ${data.btc_symbol}`
       : subtitle;
 
   const points = data?.points ?? [];
