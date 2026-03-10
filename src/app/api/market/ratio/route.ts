@@ -64,24 +64,33 @@ const DEMO_PARAMS: Record<
   AssetKey,
   { startRatio: number; monthlyDrift: number; monthlyVol: number }
 > = {
-  gold: { startRatio: 0.035, monthlyDrift: 0.990, monthlyVol: 0.07 },
-  silver: { startRatio: 0.0004, monthlyDrift: 0.989, monthlyVol: 0.12 },
-  eth: { startRatio: 0.05, monthlyDrift: 0.993, monthlyVol: 0.28 },
-  nasdaq: { startRatio: 0.006, monthlyDrift: 0.991, monthlyVol: 0.10 },
-  sp500: { startRatio: 0.008, monthlyDrift: 0.991, monthlyVol: 0.09 },
-  meta: { startRatio: 0.008, monthlyDrift: 0.989, monthlyVol: 0.22 },
-};
-
-const DEMO_TARGET_LATEST_RATIO: Record<AssetKey, number> = {
-  gold: 0.0757,
-  silver: 0.001236,
-  eth: 0.02943,
-  nasdaq: 0.3666,
-  sp500: 0.1003,
-  meta: 0.00958,
+  gold: { startRatio: 0.05, monthlyDrift: 0.990, monthlyVol: 0.07 },
+  silver: { startRatio: 0.0006, monthlyDrift: 0.989, monthlyVol: 0.12 },
+  eth: { startRatio: 0.12, monthlyDrift: 0.993, monthlyVol: 0.28 },
+  nasdaq: { startRatio: 0.015, monthlyDrift: 0.991, monthlyVol: 0.10 },
+  sp500: { startRatio: 0.012, monthlyDrift: 0.991, monthlyVol: 0.09 },
+  meta: { startRatio: 0.012, monthlyDrift: 0.989, monthlyVol: 0.22 },
 };
 
 const DEMO_TARGET_LATEST_BTC_USD = 67_235;
+
+const DEMO_TARGET_LATEST_ASSET_USD: Record<AssetKey, number> = {
+  gold: 2150,
+  silver: 24.5,
+  eth: 3500,
+  nasdaq: 430,
+  sp500: 510,
+  meta: 500,
+};
+
+const DEMO_TARGET_LATEST_RATIO: Record<AssetKey, number> = {
+  gold: DEMO_TARGET_LATEST_ASSET_USD.gold / DEMO_TARGET_LATEST_BTC_USD,
+  silver: DEMO_TARGET_LATEST_ASSET_USD.silver / DEMO_TARGET_LATEST_BTC_USD,
+  eth: DEMO_TARGET_LATEST_ASSET_USD.eth / DEMO_TARGET_LATEST_BTC_USD,
+  nasdaq: DEMO_TARGET_LATEST_ASSET_USD.nasdaq / DEMO_TARGET_LATEST_BTC_USD,
+  sp500: DEMO_TARGET_LATEST_ASSET_USD.sp500 / DEMO_TARGET_LATEST_BTC_USD,
+  meta: DEMO_TARGET_LATEST_ASSET_USD.meta / DEMO_TARGET_LATEST_BTC_USD,
+};
 
 function requireFinite(n: number, label: string) {
   if (!Number.isFinite(n)) {
@@ -293,7 +302,12 @@ export async function GET(req: Request) {
       ? process.env.TWELVEDATA_API_KEY
       : undefined;
   if (!apikey) {
-    const demoSymbol = ASSET_SYMBOLS[asset]?.[0] || asset;
+    const demoSymbol =
+      asset === "nasdaq"
+        ? "QQQ"
+        : asset === "sp500"
+          ? "SPY"
+          : ASSET_SYMBOLS[asset]?.[0] || asset;
     const response: ApiResponse = {
       asset,
       interval,

@@ -21,11 +21,12 @@ export function StaticAssetsSection() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">
-              Activos (datos anuales)
+              Precio de bienes contra bitcoin
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Precios en USD (mercado USA) convertidos a BTC usando el precio
-              anual de Bitcoin del JSON.
+              Estas tres gráficas demuestran porque bitcoin es un dinero
+              deflacionario y que siempre mantendrá su valor a través del
+              tiempo.
             </p>
           </div>
         </div>

@@ -18,7 +18,7 @@ function formatPct(pct: number) {
 
 function formatProvider(source: string) {
   if (source === "twelvedata") return "Twelve Data";
-  if (source === "demo") return "Simulación";
+  if (source === "demo") return "Twelve Data Demo";
   return source;
 }
 
